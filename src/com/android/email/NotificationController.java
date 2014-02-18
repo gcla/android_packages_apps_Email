@@ -66,6 +66,10 @@ import com.google.common.annotations.VisibleForTesting;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
+import java.lang.StringBuilder;
+import org.json.JSONObject;
+import org.json.JSONArray;
 
 /**
  * Class that manages notifications.
@@ -510,7 +514,7 @@ public class NotificationController {
      */
     @VisibleForTesting
     Notification createNewMessageNotification(long accountId, long mailboxId, Cursor messageCursor,
-            long newestMessageId, int unseenMessageCount, int unreadCount) {
+            long newestMessageId, int unseenMessageCount, int unreadCount, StringBuilder gcSubject, StringBuilder gcSender) {
         final Account account = Account.restoreAccountWithId(mContext, accountId);
         if (account == null) {
             return null;
@@ -525,6 +529,13 @@ public class NotificationController {
         if (senderName == null) {
             senderName = ""; // Happens when a message has no from.
         }
+
+	// gcla - return the data needed for the Pebble notification
+	gcSender.append(senderName);
+	gcSubject.append(message.mSubject);
+	gcSubject.append("\n");
+	gcSubject.append(message.mSnippet);
+
         final boolean multipleUnseen = unseenMessageCount > 1;
         final Bitmap senderPhoto = multipleUnseen
                 ? mGenericMultipleSenderIcon
@@ -1078,13 +1089,39 @@ public class NotificationController {
                         return;
                     }
 
+		    StringBuilder gcSubject = new StringBuilder();
+		    StringBuilder gcSender = new StringBuilder();
                     Notification n = sInstance.createNewMessageNotification(
                             mAccountId, mMailboxId, c, newMessageId,
-                            newMessageCount, unreadCount);
+                            newMessageCount, unreadCount, gcSubject, gcSender);
                     if (n != null) {
                         // Make the notification visible
                         sInstance.mNotificationManager.notify(
-                                sInstance.getNewMessageNotificationId(mAccountId), n);
+							      sInstance.getNewMessageNotificationId(mAccountId), n);
+
+			{
+			    try {
+				final Intent i = new Intent("com.getpebble.action.SEND_NOTIFICATION");
+				final Map data1 = new HashMap();
+				data1.put("title", gcSender.toString());
+				data1.put("body", gcSubject.toString());
+
+				final JSONObject jsonData = new JSONObject(data1);
+				final String notificationData = new JSONArray().put(jsonData).toString();
+
+				i.putExtra("messageType", "PEBBLE_ALERT");
+				i.putExtra("sender", "PebbleGmail");
+				i.putExtra("notificationData", notificationData);
+
+				if (mContext != null) {
+				    mContext.sendBroadcast(i);
+				} else {
+				    Log.e(Logging.LOG_TAG, "GCLA: mContext was null so could not send pebble notification!");
+				}
+			    } catch (Exception e) {
+				Log.e(Logging.LOG_TAG, "GCLA: exception generating notification for pebble: " + e);
+			    }
+			}
                     }
                 }
                 // Save away the new values

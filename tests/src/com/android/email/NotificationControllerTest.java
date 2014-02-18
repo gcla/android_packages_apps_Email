@@ -27,6 +27,8 @@ import com.android.emailcommon.provider.Account;
 import com.android.emailcommon.provider.EmailContent.Message;
 import com.android.emailcommon.provider.Mailbox;
 
+import java.lang.StringBuilder;
+
 /**
  * Test for {@link NotificationController}.
  *
@@ -174,7 +176,9 @@ public class NotificationControllerTest extends AndroidTestCase {
         Mailbox b1 = ProviderTestUtils.setupMailbox("inbox", a1.mId, true, c, Mailbox.TYPE_INBOX);
         Message m1 = ProviderTestUtils.setupMessage("message", a1.mId, b1.mId, true, true, c);
 
-        n = mTarget.createNewMessageNotification(a1.mId, b1.mId, null, m1.mId, 1, 1);
+	StringBuilder foo = new StringBuilder();
+	StringBuilder bar = new StringBuilder();
+        n = mTarget.createNewMessageNotification(a1.mId, b1.mId, null, m1.mId, 1, 1, foo, bar);
 
         assertEquals(R.drawable.stat_notify_email_generic, n.icon);
         assertEquals(mMockClock.mTime, n.when);
@@ -184,7 +188,7 @@ public class NotificationControllerTest extends AndroidTestCase {
         // TODO Check content -- how?
 
         // Case 2: 1 account, 2 unseen message
-        n = mTarget.createNewMessageNotification(a1.mId, b1.mId, null, m1.mId, 2, 2);
+        n = mTarget.createNewMessageNotification(a1.mId, b1.mId, null, m1.mId, 2, 2, foo, bar);
 
         assertEquals(R.drawable.stat_notify_email_generic, n.icon);
         assertEquals(mMockClock.mTime, n.when);
@@ -207,8 +211,10 @@ public class NotificationControllerTest extends AndroidTestCase {
         m1.mFrom = null;
         m1.save(c);
 
+	StringBuilder foo = new StringBuilder();
+	StringBuilder bar = new StringBuilder();
         // This shouldn't crash.
-        n = mTarget.createNewMessageNotification(a1.mId, b1.mId, null, m1.mId, 1, 1);
+        n = mTarget.createNewMessageNotification(a1.mId, b1.mId, null, m1.mId, 1, 1, foo, bar);
 
         // Minimum test for the result
         assertEquals(R.drawable.stat_notify_email_generic, n.icon);
